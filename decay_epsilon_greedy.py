@@ -2,16 +2,17 @@ from env.mab import BernoulliBanditEnv
 import numpy as np
 from mab_solver import Solver, plot_results
 
-class EpsilonGreedySolver(Solver):
+class DecayingEpsilonGreedySolver(Solver):
     """ epsilon贪婪算法,继承Solver类 """
-    def __init__(self, bandit, epsilon=0.01, init_prob=1.0):
-        super(EpsilonGreedySolver, self).__init__(bandit)
-        self.epsilon = epsilon
+    def __init__(self, bandit, init_prob=1.0):
+        super(DecayingEpsilonGreedySolver, self).__init__(bandit)
+        self.total_count = 0.
         #初始化拉动所有拉杆的期望奖励估值
         self.estimates = np.array([init_prob] * self.K)
 
     def run_one_step(self):
-        if np.random.random() < self.epsilon:
+        self.total_count += 1
+        if np.random.random() < 1 / self.total_count:
             k = np.random.randint(0, self.K)  # 随机选择一根拉杆
         else:
             k = np.argmax(self.estimates)  # 选择期望奖励估值最大的拉杆
@@ -19,16 +20,9 @@ class EpsilonGreedySolver(Solver):
         self.estimates[k] += 1. / (self.counts[k] + 1) * (r - self.estimates[k])
         return k
 
-np.random.seed(2)
+np.random.seed(0)
 env = BernoulliBanditEnv(K=10)  # 创建一个10臂老虎机环境
-# solver = EpsilonGreedySolver(env, epsilon=0.01)
-# solver.run(5000)  
-epsilons = [0.0, 1e-4, 0.01, 0.1, 0.25, 0.5]
-epsilon_greedy_solver_list = [
-    EpsilonGreedySolver(env, epsilon=e) for e in epsilons
-]
-epsilon_greedy_solver_names = ["epsilon={}".format(e) for e in epsilons]
-for solver in epsilon_greedy_solver_list:
-    solver.run(5000)
+solver = DecayingEpsilonGreedySolver(env)
+solver.run(5000)  
 
-plot_results(epsilon_greedy_solver_list, epsilon_greedy_solver_names)
+plot_results([solver], ["Decaying Epsilon-Greedy"])
